@@ -372,6 +372,105 @@ else
     check_security "SUID Files" "WARN" "Found $SUID_FILES SUID files outside standard locations - verify if legitimate"
 fi
 
+
+
+# Function to check if a package is installed
+check_install() {
+    dpkg -l | grep -q "$1" && echo "$1 is already installed." || (echo "Installing $1..." && sudo apt install -y "$1")
+}
+
+# Update package lists
+echo "Updating package lists..."
+sudo apt update -y
+
+# Install required packages
+echo "Installing necessary dependencies..."
+check_install docker.io
+check_install docker-compose
+check_install nginx
+check_install mysql-server
+check_install php
+check_install php-fpm
+check_install php-mysql
+check_install curl
+check_install unzip
+
+# Check if Docker is installed and running
+if command -v docker &>/dev/null; then
+    echo "Docker is installed."
+    if systemctl is-active --quiet docker; then
+        echo "Docker is running."
+    else
+        echo "Docker is not running. Starting Docker..."
+        sudo systemctl start docker
+    fi
+else
+    echo "Docker is not installed. Please install it manually."
+    exit 1
+fi
+
+# Check if Nginx is installed and running
+if command -v nginx &>/dev/null; then
+    echo "Nginx is installed."
+    if systemctl is-active --quiet nginx; then
+        echo "Nginx is running."
+    else
+        echo "Nginx is not running. Starting Nginx..."
+        sudo systemctl start nginx
+    fi
+else
+    echo "Nginx is not installed. Please install it manually."
+    exit 1
+fi
+
+# Check if MySQL is installed and running
+if command -v mysql &>/dev/null; then
+    echo "MySQL is installed."
+    if systemctl is-active --quiet mysql; then
+        echo "MySQL is running."
+    else
+        echo "MySQL is not running. Starting MySQL..."
+        sudo systemctl start mysql
+    fi
+else
+    echo "MySQL is not installed. Please install it manually."
+    exit 1
+fi
+
+# Check if PHP is installed
+if command -v php &>/dev/null; then
+    echo "PHP is installed."
+else
+    echo "PHP is not installed. Please install it manually."
+    exit 1
+fi
+
+# Check if WordPress is installed
+WP_PATH="/var/www/html"
+if [[ -f "$WP_PATH/wp-config.php" ]]; then
+    echo "WordPress is installed at $WP_PATH"
+else
+    echo "WordPress is not installed. Installing WordPress..."
+    cd /tmp
+    curl -O https://wordpress.org/latest.tar.gz
+    tar -xzf latest.tar.gz
+    sudo mv wordpress "$WP_PATH"
+    sudo chown -R www-data:www-data "$WP_PATH"
+    sudo chmod -R 755 "$WP_PATH"
+    echo "WordPress installation completed."
+fi
+
+# List running Docker containers
+echo "Checking running Docker containers..."
+docker ps
+
+echo "All checks completed successfully!"
+
+
+
+
+
+
 # Add system information summary to report
 echo "================================" >> "$REPORT_FILE"
 echo "System Information Summary:" >> "$REPORT_FILE"
